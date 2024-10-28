@@ -1,27 +1,25 @@
-import { createBullMonitor } from '@bull-monitor/root';
-import { BullMQAdapter } from '@bull-monitor/root/dist/bullmq-adapter';
-import { ExpressAdapter } from '@bull-monitor/express';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 import { CONFIG } from './config.js';
 import { getQueue } from './queues.js';
 
-// Create Express adapter
-const monitorAdapter = new ExpressAdapter();
+export const BOARD_BASE_PATH = '/board';
 
-// Create Bull Monitor adapters for each queue
-const bullMQQueues = Object.values(CONFIG.QUEUE_NAMES).map(queueName => {
+// Create the Express adapter for Bull Board
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath(BOARD_BASE_PATH);
+
+// Get all queues for Bull Board
+const queues = Object.values(CONFIG.QUEUE_NAMES).map(queueName => {
     const queue = getQueue(queueName);
     return new BullMQAdapter(queue);
 });
 
-// Create the monitor
-const monitor = createBullMonitor({
-    queues: bullMQQueues,
-    adapter: monitorAdapter,
-    options: {
-        metrics: {
-            collectInterval: 5000, // Collect metrics every 5 seconds
-        },
-    },
+// Create Bull Board
+createBullBoard({
+    queues,
+    serverAdapter,
 });
 
-export default monitorAdapter;
+export const bullBoardAdapter = serverAdapter;

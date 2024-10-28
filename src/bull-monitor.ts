@@ -1,11 +1,7 @@
-import { createBullMonitor } from '@bull-monitor/root';
+import { BullMonitorExpress } from '@bull-monitor/express';
 import { BullMQAdapter } from '@bull-monitor/root/dist/bullmq-adapter';
-import { ExpressAdapter } from '@bull-monitor/express';
-import { CONFIG } from './config';
-import { getQueue } from './queues';
-
-// Create Express adapter
-const monitorAdapter = new ExpressAdapter();
+import { CONFIG } from './config.js';
+import { getQueue } from './queues.js';
 
 // Create Bull Monitor adapters for each queue
 const bullMQQueues = Object.values(CONFIG.QUEUE_NAMES).map(queueName => {
@@ -13,15 +9,16 @@ const bullMQQueues = Object.values(CONFIG.QUEUE_NAMES).map(queueName => {
     return new BullMQAdapter(queue);
 });
 
-// Create the monitor
-const monitor = createBullMonitor({
+// Create the Bull Monitor instance
+const bullMonitorExpress = new BullMonitorExpress({
     queues: bullMQQueues,
-    adapter: monitorAdapter,
-    options: {
-        metrics: {
-            collectInterval: 5000, // Collect metrics every 5 seconds
-        },
+    gqlIntrospection: process.env.NODE_ENV !== 'production',
+    metrics: {
+        collectInterval: { minutes: 5 }, // Collect metrics every 5 minutes
+        maxMetrics: 100,
+        // Optionally disable metrics for specific queues
+        // blacklist: ['email-queue'],
     },
 });
 
-export default monitorAdapter;
+export { bullMonitorExpress };

@@ -1,11 +1,18 @@
 import express from 'express';
 import basicAuth from 'express-basic-auth';
 import { CONFIG } from './config.js';
-import BullBoardAdapter, { BOARD_BASE_PATH } from './bull-board.js';
-import MonitorAdapter from './bull-monitor.js';
+import { BOARD_BASE_PATH, bullBoardAdapter } from './bull-board.js';
+import { bullMonitorExpress } from './bull-monitor.js';
 import { closeQueues } from './queues.js';
 
 const app = express();
+
+// Error handling middleware
+app.use((err: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+    next(err);
+});
 
 // Basic authentication middleware
 const auth = CONFIG.AUTH.ENABLED
@@ -17,11 +24,14 @@ const auth = CONFIG.AUTH.ENABLED
 
 async function startServer() {
     try {
-        // Mount Bull Board
-        app.use(BOARD_BASE_PATH, auth, BullBoardAdapter.getRouter());
+        // Initialize Bull Monitor
+        await bullMonitorExpress.init();
 
-        // Mount Bull Monitor
-        app.use('/', auth, MonitorAdapter.getRouter());
+        // Mount Bull Board at /board
+        app.use(BOARD_BASE_PATH, auth, bullBoardAdapter.getRouter());
+
+        // Mount Bull Monitor at root
+        app.use('/', auth, bullMonitorExpress.router);
 
         // Health check endpoint
         app.get('/health', (_req, res) => {
