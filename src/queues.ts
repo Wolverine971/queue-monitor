@@ -6,7 +6,9 @@ import { CONFIG, type QueueName } from './config.js';
 const connection = new IORedis(CONFIG.REDIS_URL!, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
-});
+}).setMaxListeners(10);
+
+
 
 // Queue cache
 const queueCache = new Map<QueueName, Queue>();
